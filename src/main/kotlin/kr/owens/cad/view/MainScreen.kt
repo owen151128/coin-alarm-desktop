@@ -18,6 +18,9 @@ import kr.owens.cad.model.ContentState
 import kr.owens.cad.model.Exchange
 import kr.owens.cad.model.Ticker
 import kr.owens.cad.style.*
+import kr.owens.cad.util.CacheModule
+import kr.owens.cad.util.Log
+import javax.swing.JOptionPane
 
 /**
  * @author owen151128@gmail.com
@@ -124,12 +127,49 @@ fun TitleBar(
     tickerObserverState: MutableState<Boolean>
 ) {
     val refreshButtonHover = remember { mutableStateOf(false) }
+    val cachingButtonHover = remember { mutableStateOf(false) }
     val showTickerDialog = remember { mutableStateOf(false) }
 
     TopAppBar(backgroundColor = PrimaryColor,
         title = {
             Row(Modifier.height(50.dp)) {
                 Text(text, Modifier.weight(1f).align(Alignment.CenterVertically), Foreground)
+
+                Surface(
+                    modifier = Modifier.padding(end = 20.dp).align(Alignment.CenterVertically),
+                    CircleShape,
+                    Color.Transparent
+                ) {
+                    Tooltip(ResString.cache) {
+                        Clickable(
+                            modifier = Modifier.hover(
+                                onEnter = {
+                                    cachingButtonHover.value = true
+                                    false
+                                },
+                                onExit = {
+                                    cachingButtonHover.value = false
+                                    false
+                                }
+                            )
+                                .background(color = if (cachingButtonHover.value) TranslucentBlack else Color.Transparent),
+                            onClick = {
+                                CacheModule.cacheTickerMap(ContentState.tickerMap)
+                                    .onSuccess {
+                                        Log.d("Cache tickerMap success!")
+                                        JOptionPane.showMessageDialog(null, "Success cached!")
+                                    }
+                                    .onFailure {
+                                        Log.e("Cache tickerMap failed... cause : ${it.stackTraceToString()}")
+                                        JOptionPane.showMessageDialog(null, "Failed caching...")
+                                    }
+                            }
+                        ) {
+                            Image(icCache(), null, Modifier.size(35.dp))
+                        }
+                    }
+                }
+
                 Surface(
                     modifier = Modifier.padding(end = 20.dp).align(Alignment.CenterVertically),
                     CircleShape,
