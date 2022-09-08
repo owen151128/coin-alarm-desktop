@@ -52,6 +52,7 @@ fun tickerAddDialog(
     showTickerDialog: MutableState<Boolean>,
     tickerObserverState: MutableState<Boolean>
 ) {
+    val notLoadedMessage = "Not Loaded"
     val coinExchanges = Exchange.values().map { it.name.lowercase() }
 
     val focusRequester = remember { FocusRequester() }
@@ -64,26 +65,13 @@ fun tickerAddDialog(
         Button({
             val min = minInputState.value.trim().toIntOrNull() ?: 0
             val max = maxInputState.value.trim().toIntOrNull() ?: 0
-            val ticker = if (selectedExchange.trim().uppercase() == Exchange.BINANCE.name) {
-                Ticker(
-                    Exchange.BINANCE,
-                    "${tickerInputState.value.trim().uppercase()}/USDT",
-                    "$0",
-                    min,
-                    max
-                )
+            if (selectedExchange.trim().uppercase() == Exchange.BINANCE.name) {
+                content.tickerMap["${tickerInputState.value.trim().lowercase()}usdt"] =
+                    Ticker(Exchange.BINANCE, notLoadedMessage, min, max)
             } else {
-                Ticker(
-                    Exchange.UPBIT,
-                    "KRW-${tickerInputState.value.trim().uppercase()}",
-                    "\u20A90",
-                    min,
-                    max
-                )
+                content.tickerMap["KRW-${tickerInputState.value.trim().uppercase()}"] =
+                    Ticker(Exchange.UPBIT, notLoadedMessage, min, max)
             }
-
-            content.tickerList.add(ticker)
-            tickerObserverState.value = !tickerObserverState.value
 
             showTickerDialog.value = false
         }) { Text(ResString.add) }
@@ -188,12 +176,12 @@ fun ScrollableArea(
 
         Text(tickerObserverState.value.toString(), Modifier.alpha(0f))
         Column(Modifier.verticalScroll(stateVertical).align(Alignment.TopCenter)) {
-            content.tickerList.forEach {
+            content.tickerMap.forEach {
                 Box(
                     Modifier.height(32.dp).fillMaxWidth(0.95f).background(Green)
                         .padding(start = 10.dp), Alignment.CenterStart
                 ) {
-                    Text("${it.ticker} / ${it.currenPrice} / ${it.max} / ${it.min}")
+                    Text("${it.key} / ${it.value.currenPrice} / ${it.value.min} / ${it.value.max}")
                     val removeButtonHover = remember { mutableStateOf(false) }
                     Surface(
                         modifier = Modifier.padding(end = 10.dp).align(Alignment.CenterEnd),
@@ -213,9 +201,7 @@ fun ScrollableArea(
                             )
                                 .background(color = if (removeButtonHover.value) TranslucentBlack else Color.Transparent),
                             onClick = {
-                                content.tickerList.remove(it)
-                                content.tickerObserverState.value =
-                                    !content.tickerObserverState.value
+                                content.tickerMap.remove(it.key)
                             }
                         ) {
                             Image(icRemove(), null)
