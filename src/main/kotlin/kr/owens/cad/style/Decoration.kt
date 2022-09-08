@@ -18,3 +18,6 @@ fun icAdd() = painterResource("images/add.png")
 
 @Composable
 fun icRemove() = painterResource("images/trash.png")
+
+@Composable
+fun icCache() = painterResource("images/cache.png")
