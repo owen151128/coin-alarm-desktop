@@ -1,7 +1,6 @@
 package kr.owens.cad.model
 
-import kr.owens.cad.util.CacheModule
-import kr.owens.cad.util.Log
+import kr.owens.cad.util.AlarmModule
 import kr.owens.cad.util.websocket.ExchangeWebSocketModule
 
 /**
@@ -23,6 +22,7 @@ class TickerMap : HashMap<String, Ticker>() {
     override fun put(key: String, value: Ticker): Ticker? {
         val result = super.put(key, value)
 
+        AlarmModule.stopAlarm()
         ExchangeWebSocketModule.refreshWebSocket()
 
         return result
@@ -31,6 +31,7 @@ class TickerMap : HashMap<String, Ticker>() {
     override fun remove(key: String): Ticker? {
         val result = super.remove(key)
 
+        AlarmModule.stopAlarm()
         ExchangeWebSocketModule.refreshWebSocket()
 
         return result

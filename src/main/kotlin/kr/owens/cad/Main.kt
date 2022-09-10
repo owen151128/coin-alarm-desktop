@@ -15,11 +15,9 @@ import kr.owens.cad.style.icApp
 import kr.owens.cad.util.getPreferredWindowSize
 import kr.owens.cad.view.AppUi
 import kr.owens.cad.view.SplashUi
-import kotlin.concurrent.thread
 
 @Composable
 fun createWindow(
-    content: ContentState,
     exitApplication: () -> Unit,
     icon: Painter,
     desiredHeight: Int,
@@ -55,11 +53,11 @@ fun main() = application {
     }
 
     if (content.isAppReady()) {
-        createWindow(content, ::exitApplication, icon, desiredHeight, decorated) {
+        createWindow(::exitApplication, icon, desiredHeight, decorated) {
             AppUi(content)
         }
     } else {
-        createWindow(content, ::exitApplication, icon, desiredHeight, decorated) {
+        createWindow(::exitApplication, icon, desiredHeight, decorated) {
             SplashUi()
         }
     }
