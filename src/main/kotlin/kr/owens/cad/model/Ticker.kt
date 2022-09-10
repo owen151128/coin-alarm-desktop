@@ -10,6 +10,6 @@ package kr.owens.cad.model
 data class Ticker(
     val exchange: Exchange,
     var currenPrice: String,
-    val min: Int,
-    val max: Int
+    val min: Double,
+    val max: Double
 )

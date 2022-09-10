@@ -7,11 +7,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import kr.owens.cad.ResString
 import kr.owens.cad.model.ContentState
@@ -36,26 +41,22 @@ fun MainScreen(content: ContentState) {
     content.tickerObserverState = tickerObserverState
 
     Column {
-        TopContent(content, tickerObserverState)
+        TopContent(content)
         ScrollableArea(content, tickerObserverState)
     }
 }
 
 @Composable
-fun TopContent(content: ContentState, tickerObserverState: MutableState<Boolean>) {
-    TitleBar(ResString.appName, content, tickerObserverState)
+fun TopContent(content: ContentState) {
+    TitleBar(ResString.appName, content)
     Spacer(modifier = Modifier.height(10.dp))
     Divider()
     Spacer(modifier = Modifier.height(5.dp))
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun tickerAddDialog(
-    content: ContentState,
-    showTickerDialog: MutableState<Boolean>,
-    tickerObserverState: MutableState<Boolean>
-) {
+fun tickerAddDialog(content: ContentState, showTickerDialog: MutableState<Boolean>) {
     val notLoadedMessage = "Not Loaded"
     val coinExchanges = Exchange.values().map { it.name.lowercase() }
 
@@ -65,19 +66,23 @@ fun tickerAddDialog(
     val minInputState = remember { mutableStateOf("") }
     val maxInputState = remember { mutableStateOf("") }
 
+    val onClickCallback = {
+        val min = minInputState.value.trim().toDoubleOrNull() ?: 0.0
+        val max = maxInputState.value.trim().toDoubleOrNull() ?: 0.0
+        if (selectedExchange.trim().uppercase() == Exchange.BINANCE.name) {
+            content.tickerMap["${tickerInputState.value.trim().lowercase()}usdt"] =
+                Ticker(Exchange.BINANCE, notLoadedMessage, min, max)
+        } else {
+            content.tickerMap["KRW-${tickerInputState.value.trim().uppercase()}"] =
+                Ticker(Exchange.UPBIT, notLoadedMessage, min, max)
+        }
+
+        showTickerDialog.value = false
+    }
+
     AlertDialog({ showTickerDialog.value = false }, confirmButton = {
         Button({
-            val min = minInputState.value.trim().toIntOrNull() ?: 0
-            val max = maxInputState.value.trim().toIntOrNull() ?: 0
-            if (selectedExchange.trim().uppercase() == Exchange.BINANCE.name) {
-                content.tickerMap["${tickerInputState.value.trim().lowercase()}usdt"] =
-                    Ticker(Exchange.BINANCE, notLoadedMessage, min, max)
-            } else {
-                content.tickerMap["KRW-${tickerInputState.value.trim().uppercase()}"] =
-                    Ticker(Exchange.UPBIT, notLoadedMessage, min, max)
-            }
-
-            showTickerDialog.value = false
+            onClickCallback()
         }) { Text(ResString.add) }
     }, title = { Text(ResString.addDialogMessage) }, text = {
         Column {
@@ -108,12 +113,21 @@ fun tickerAddDialog(
             OutlinedTextField(
                 minInputState.value,
                 { t -> minInputState.value = t },
-                label = { Text(ResString.minInputHint) })
+                label = { Text(ResString.minInputHint) }
+            )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 maxInputState.value,
                 { t -> maxInputState.value = t },
-                label = { Text(ResString.maxInputHint) })
+                label = { Text(ResString.maxInputHint) }
+            )
+        }
+    }, modifier = Modifier.onKeyEvent {
+        if (it.isCtrlPressed && it.key == Key.S) {
+            onClickCallback()
+            true
+        } else {
+            false
         }
     })
     LaunchedEffect(Unit) {
@@ -122,11 +136,7 @@ fun tickerAddDialog(
 }
 
 @Composable
-fun TitleBar(
-    text: String,
-    content: ContentState,
-    tickerObserverState: MutableState<Boolean>
-) {
+fun TitleBar(text: String, content: ContentState) {
     val addButtonHover = remember { mutableStateOf(false) }
     val cachingButtonHover = remember { mutableStateOf(false) }
     val showTickerDialog = remember { mutableStateOf(false) }
@@ -202,7 +212,7 @@ fun TitleBar(
     )
 
     if (showTickerDialog.value) {
-        tickerAddDialog(content, showTickerDialog, tickerObserverState)
+        tickerAddDialog(content, showTickerDialog)
     }
 }
 
@@ -218,11 +228,27 @@ fun ScrollableArea(
         Text(tickerObserverState.value.toString(), Modifier.alpha(0f))
         Column(Modifier.verticalScroll(stateVertical).align(Alignment.TopCenter)) {
             content.tickerMap.forEach {
+                var backgroundColor: Color = Green
+                if (it.value.currenPrice != "Not Loaded") {
+                    val currentPrice =
+                        it.value.currenPrice.trimStart('$', '\u20A9').replace(",", "").toDouble()
+                    if (currentPrice <= it.value.min || currentPrice >= it.value.max) {
+                        AlarmModule.playAlarm()
+                        backgroundColor = Red
+                    } else if (it.value.min * 1.05 >= currentPrice || it.value.max * 0.95 <= currentPrice) {
+                        backgroundColor = Yellow
+                    }
+                }
+
                 Box(
-                    Modifier.height(32.dp).fillMaxWidth(0.95f).background(Green)
+                    Modifier.height(32.dp).fillMaxWidth(0.95f).background(backgroundColor)
                         .padding(start = 10.dp), Alignment.CenterStart
                 ) {
-                    Text("${it.key} / ${it.value.currenPrice} / ${it.value.min} / ${it.value.max}")
+                    Text(
+                        "${it.key} / ${it.value.currenPrice} / " +
+                                "${"$%,f".format(it.value.min)} / " +
+                                "$%,f".format(it.value.max)
+                    )
                     val removeButtonHover = remember { mutableStateOf(false) }
                     Surface(
                         modifier = Modifier.padding(end = 10.dp).align(Alignment.CenterEnd),
