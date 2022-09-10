@@ -18,6 +18,7 @@ import kr.owens.cad.model.ContentState
 import kr.owens.cad.model.Exchange
 import kr.owens.cad.model.Ticker
 import kr.owens.cad.style.*
+import kr.owens.cad.util.AlarmModule
 import kr.owens.cad.util.CacheModule
 import kr.owens.cad.util.Log
 import javax.swing.JOptionPane
@@ -126,7 +127,7 @@ fun TitleBar(
     content: ContentState,
     tickerObserverState: MutableState<Boolean>
 ) {
-    val refreshButtonHover = remember { mutableStateOf(false) }
+    val addButtonHover = remember { mutableStateOf(false) }
     val cachingButtonHover = remember { mutableStateOf(false) }
     val showTickerDialog = remember { mutableStateOf(false) }
 
@@ -179,15 +180,15 @@ fun TitleBar(
                         Clickable(
                             modifier = Modifier.hover(
                                 onEnter = {
-                                    refreshButtonHover.value = true
+                                    addButtonHover.value = true
                                     false
                                 },
                                 onExit = {
-                                    refreshButtonHover.value = false
+                                    addButtonHover.value = false
                                     false
                                 }
                             )
-                                .background(color = if (refreshButtonHover.value) TranslucentBlack else Color.Transparent),
+                                .background(color = if (addButtonHover.value) TranslucentBlack else Color.Transparent),
                             onClick = {
                                 showTickerDialog.value = true
                             }
